@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск - FilmoGraph</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>FilmoGraph</h1>
+            <p class="subtitle">Поиск фильмов и сериалов</p>
+        </header>
+
+        <nav>
+            <a href="/" class="nav-link">Главная</a>
+            <a href="/search" class="nav-link active">Поиск</a>
+        </nav>
+
+        <section class="api-status-section">
+            <h3>Доступность сервисов</h3>
+            <div class="api-status-grid">
+                <div class="api-status-item {{ 'available' if api_status.get('omdb', {}).get('available') else 'unavailable' }}">
+                    <span class="status-dot"></span>
+                    <span>OMDb</span>
+                </div>
+                <div class="api-status-item {{ 'available' if api_status.get('shikimori', {}).get('available') else 'unavailable' }}">
+                    <span class="status-dot"></span>
+                    <span>Shikimori</span>
+                </div>
+                <div class="api-status-item {{ 'available' if api_status.get('kinopoisk', {}).get('available') else 'unavailable' }}">
+                    <span class="status-dot"></span>
+                    <span>KinoPoisk</span>
+                </div>
+                <div class="api-status-item {{ 'available' if api_status.get('kinorium', {}).get('available') else 'unavailable' }}">
+                    <span class="status-dot"></span>
+                    <span>Kinorium</span>
+                </div>
+            </div>
+            {% set errors = [] %}
+            {% for name, info in api_status.items() %}
+                {% if info and info.get('error') %}
+                    {% set _ = errors.append((name, info.error)) %}
+                {% endif %}
+            {% endfor %}
+            {% if errors %}
+            <div class="api-errors">
+                {% for name, error in errors %}
+                <div class="api-error-item">
+                    <strong>{{ name }}:</strong> {{ error }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="search-section">
+            <form action="/search" method="get" class="search-form">
+                <select name="type" class="search-select">
+                    <option value="all" {{ 'selected' if content_type == 'all' }}>Все</option>
+                    <option value="movie" {{ 'selected' if content_type == 'movie' }}>Фильмы</option>
+                    <option value="tv" {{ 'selected' if content_type == 'tv' }}>Сериалы</option>
+                    <option value="anime" {{ 'selected' if content_type == 'anime' }}>Аниме</option>
+                </select>
+                <input type="text" name="q" value="{{ query }}" placeholder="Введите название или ссылку..." class="search-input" required>
+                <button type="submit" class="btn btn-primary">Найти</button>
+            </form>
+            <p class="search-hint">Поиск по названию или ссылки: imdb.com/title/tt1234567, kinopoisk.ru/film/12345, kinorium.com/12345, shikimori.io/animes/12345</p>
+        </section>
+
+        {% if error_message %}
+        <div class="error-banner">
+            <p>{{ error_message }}</p>
+            <p class="error-hint">Вы можете заполнить данные вручную и добавить тайтл в коллекцию</p>
+        </div>
+        {% endif %}
+
+        {% if search_errors and not error_message %}
+        <div class="error-banner" style="background: rgba(234, 179, 8, 0.2); border-color: var(--warning);">
+            <p style="color: var(--warning);">Проблемы с некоторыми сервисами:</p>
+            {% for error in search_errors %}
+            <p class="error-hint">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if results %}
+        <section class="results-section">
+            <h2>Результаты поиска</h2>
+            <div class="results-grid">
+                {% for result in results %}
+                <div class="result-card {% if result.source == 'manual' %}manual-result{% endif %}">
+                    {% if result.source == 'manual' %}
+                    <div class="manual-add-form">
+                        <h3>{{ result.title }}</h3>
+                        <p class="manual-hint">Заполните данные вручную</p>
+                        <form action="/add" method="post" class="inline-form">
+                            <input type="hidden" name="tmdb_id" value="{{ result.tmdb_id }}">
+                            <input type="hidden" name="title" value="{{ result.title }}">
+                            <div class="form-group">
+                                <label>Тип:</label>
+                                <select name="media_type">
+                                    <option value="movie">Фильм</option>
+                                    <option value="tv">Сериал</option>
+                                    <option value="anime">Аниме</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Оригинальное название:</label>
+                                <input type="text" name="original_title" value="{{ result.original_title }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Год:</label>
+                                <input type="text" name="release_date" placeholder="2024">
+                            </div>
+                            <div class="form-group">
+                                <label>Описание:</label>
+                                <textarea name="overview" rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Сезонов:</label>
+                                <input type="number" name="total_seasons" value="0" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Серий:</label>
+                                <input type="number" name="total_episodes" value="0" min="0">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Добавить вручную</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <a href="/add/preview?tmdb_id={{ result.tmdb_id }}&title={{ result.title|urlencode }}&original_title={{ result.original_title|urlencode }}&media_type={{ result.media_type }}&poster_path={{ (result.poster_path or '')|urlencode }}&backdrop_path={{ (result.backdrop_path or '')|urlencode }}&overview={{ (result.overview or '')|urlencode }}&release_date={{ (result.release_date or '')|urlencode }}&vote_average={{ result.vote_average or 0 }}&total_seasons={{ result.total_seasons or 0 }}&total_episodes={{ result.total_episodes or 0 }}">
+                        {% if result.poster_path %}
+                        <img src="{{ result.poster_path }}" alt="{{ result.title }}" class="poster">
+                        {% else %}
+                        <div class="poster-placeholder">Нет постера</div>
+                        {% endif %}
+                        <div class="title-info">
+                            <h3>{{ result.title }}</h3>
+                            <p class="original-title">{{ result.original_title }}</p>
+                            <p class="year">{{ result.release_date[:4] if result.release_date else '' }}</p>
+                            <span class="media-type-badge {{ result.media_type }}">
+                                {% if result.media_type == 'tv' %}Сериал
+                                {% elif result.media_type == 'anime' %}Аниме
+                                {% else %}Фильм{% endif %}
+                            </span>
+                            <span class="source-badge">{{ result.source|upper }}</span>
+                            <span class="rating">★ {{ result.vote_average|round(1) }}</span>
+                        </div>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% elif search_performed %}
+        <div class="empty-state">
+            <p>Ничего не найдено по запросу "{{ query }}"</p>
+            <p>Попробуйте другой запрос или вставьте прямую ссылку</p>
+        </div>
+        {% endif %}
+
+        <footer>
+            <p>FilmoGraph © 2026 | Powered by OMDb + KinoPoisk + Kinorium + Shikimori</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

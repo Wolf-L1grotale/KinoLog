@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FilmoGraph - Трекер фильмов и сериалов</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>FilmoGraph</h1>
+            <p class="subtitle">Трекер фильмов и сериалов</p>
+        </header>
+
+        <nav>
+            <a href="/" class="nav-link active">Главная</a>
+            <a href="/search" class="nav-link">Поиск</a>
+        </nav>
+
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-number">{{ titles|length }}</span>
+                <span class="stat-label">Всего</span>
+            </div>
+            <div class="stat-card watching">
+                <span class="stat-number">{{ titles|selectattr('current_status', 'eq', 'watching')|list|length }}</span>
+                <span class="stat-label">Смотрю</span>
+            </div>
+            <div class="stat-card completed">
+                <span class="stat-number">{{ titles|selectattr('current_status', 'eq', 'completed')|list|length }}</span>
+                <span class="stat-label">Просмотрено</span>
+            </div>
+            <div class="stat-card planned">
+                <span class="stat-number">{{ titles|selectattr('current_status', 'eq', 'planned')|list|length }}</span>
+                <span class="stat-label">В планах</span>
+            </div>
+            <div class="stat-card anime">
+                <span class="stat-number">{{ titles|selectattr('media_type', 'eq', 'anime')|list|length }}</span>
+                <span class="stat-label">Аниме</span>
+            </div>
+        </div>
+
+        <section class="titles-section">
+            <h2>Моя коллекция</h2>
+            {% if titles %}
+            <div class="titles-grid">
+                {% for title in titles %}
+                <div class="title-card">
+                    <a href="/title/{{ title.tmdb_id }}">
+                        {% if title.local_poster_path %}
+                        <img src="{{ title.local_poster_path }}" alt="{{ title.title }}" class="poster">
+                        {% elif title.poster_path %}
+                        <img src="{{ title.poster_path }}" alt="{{ title.title }}" class="poster">
+                        {% else %}
+                        <div class="poster-placeholder">Нет постера</div>
+                        {% endif %}
+                        <div class="title-info">
+                            <h3>{{ title.title }}</h3>
+                            <p class="year">{{ title.release_date[:4] if title.release_date else '' }}</p>
+                            <span class="media-type-badge {{ title.media_type }}">
+                                {% if title.media_type == 'tv' %}Сериал
+                                {% elif title.media_type == 'anime' %}Аниме
+                                {% else %}Фильм{% endif %}
+                            </span>
+                            <span class="status-badge {{ title.current_status }}">
+                                {% if title.current_status == 'watching' %}Смотрю
+                                {% elif title.current_status == 'completed' %}Просмотрено
+                                {% elif title.current_status == 'planned' %}В планах
+                                {% elif title.current_status == 'dropped' %}Брошено
+                                {% endif %}
+                            </span>
+                            {% if title.media_type == 'tv' %}
+                            <p class="progress">Сезон {{ title.current_season }}, Серия {{ title.current_episode }}</p>
+                            {% elif title.media_type == 'anime' and title.total_episodes > 1 %}
+                            <p class="progress">Серия {{ title.current_episode }}</p>
+                            {% endif %}
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>Ваша коллекция пуста</p>
+                <a href="/search" class="btn btn-primary">Найти фильм или сериал</a>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="backup-section">
+            <h2>Резервное копирование</h2>
+            <div class="backup-info">
+                <p>Автоматическое копирование в Dropbox ежедневно в 03:00</p>
+                <button onclick="triggerBackup()" class="btn btn-secondary">Сделать бэкап сейчас</button>
+            </div>
+            <div id="backup-status"></div>
+        </section>
+
+        <footer>
+            <p>FilmoGraph © 2026 | Powered by OMDb + KinoPoisk + Shikimori</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
