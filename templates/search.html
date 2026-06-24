@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Поиск - FilmoGraph</title>
+    <title>Поиск - KinoLog</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>FilmoGraph</h1>
+            <h1>KinoLog</h1>
             <p class="subtitle">Поиск фильмов и сериалов</p>
         </header>
 
@@ -100,7 +100,7 @@
                             <input type="hidden" name="title" value="{{ result.title }}">
                             <div class="form-group">
                                 <label>Тип:</label>
-                                <select name="media_type">
+                                <select name="media_type" onchange="toggleManualFields(this)">
                                     <option value="movie">Фильм</option>
                                     <option value="tv">Сериал</option>
                                     <option value="anime">Аниме</option>
@@ -118,13 +118,15 @@
                                 <label>Описание:</label>
                                 <textarea name="overview" rows="2"></textarea>
                             </div>
-                            <div class="form-group">
-                                <label>Сезонов:</label>
-                                <input type="number" name="total_seasons" value="0" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Серий:</label>
-                                <input type="number" name="total_episodes" value="0" min="0">
+                            <div class="manual-series-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label>Сезонов:</label>
+                                    <input type="number" name="total_seasons" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Серий:</label>
+                                    <input type="number" name="total_episodes" value="0" min="0">
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary">Добавить вручную</button>
                         </form>
@@ -162,10 +164,19 @@
         {% endif %}
 
         <footer>
-            <p>FilmoGraph © 2026 | Powered by OMDb + KinoPoisk + Kinorium + Shikimori</p>
+            <p>KinoLog © 2026 | Powered by OMDb + KinoPoisk + Kinorium + Shikimori</p>
         </footer>
     </div>
 
     <script src="/static/js/main.js"></script>
+    <script>
+        function toggleManualFields(select) {
+            var form = select.closest('form');
+            var seriesFields = form.querySelector('.manual-series-fields');
+            if (seriesFields) {
+                seriesFields.style.display = select.value === 'movie' ? 'none' : 'block';
+            }
+        }
+    </script>
 </body>
 </html>

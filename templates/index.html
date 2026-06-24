@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FilmoGraph - Трекер фильмов и сериалов</title>
+    <title>KinoLog - Трекер фильмов и сериалов</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>FilmoGraph</h1>
+            <h1>KinoLog</h1>
             <p class="subtitle">Трекер фильмов и сериалов</p>
         </header>
 
@@ -23,6 +23,18 @@
                 <span class="stat-number">{{ titles|length }}</span>
                 <span class="stat-label">Всего</span>
             </div>
+            <div class="stat-card movie">
+                <span class="stat-number">{{ titles|selectattr('media_type', 'eq', 'movie')|list|length }}</span>
+                <span class="stat-label">Фильмы</span>
+            </div>
+            <div class="stat-card tv">
+                <span class="stat-number">{{ titles|selectattr('media_type', 'eq', 'tv')|list|length }}</span>
+                <span class="stat-label">Сериалы</span>
+            </div>
+            <div class="stat-card anime">
+                <span class="stat-number">{{ titles|selectattr('media_type', 'eq', 'anime')|list|length }}</span>
+                <span class="stat-label">Аниме</span>
+            </div>
             <div class="stat-card watching">
                 <span class="stat-number">{{ titles|selectattr('current_status', 'eq', 'watching')|list|length }}</span>
                 <span class="stat-label">Смотрю</span>
@@ -35,11 +47,25 @@
                 <span class="stat-number">{{ titles|selectattr('current_status', 'eq', 'planned')|list|length }}</span>
                 <span class="stat-label">В планах</span>
             </div>
-            <div class="stat-card anime">
-                <span class="stat-number">{{ titles|selectattr('media_type', 'eq', 'anime')|list|length }}</span>
-                <span class="stat-label">Аниме</span>
+            <div class="stat-card dropped">
+                <span class="stat-number">{{ titles|selectattr('current_status', 'eq', 'dropped')|list|length }}</span>
+                <span class="stat-label">Брошено</span>
             </div>
         </div>
+
+        <section class="filter-section">
+            <div class="filter-buttons">
+                <a href="/" class="filter-btn {{ 'active' if not request.query_params.get('type') and not request.query_params.get('status') }}">Все</a>
+                <a href="/?type=movie" class="filter-btn {{ 'active' if request.query_params.get('type') == 'movie' }}">Фильмы</a>
+                <a href="/?type=tv" class="filter-btn {{ 'active' if request.query_params.get('type') == 'tv' }}">Сериалы</a>
+                <a href="/?type=anime" class="filter-btn {{ 'active' if request.query_params.get('type') == 'anime' }}">Аниме</a>
+                <span class="filter-divider"></span>
+                <a href="/?status=watching" class="filter-btn {{ 'active' if request.query_params.get('status') == 'watching' }}">Смотрю</a>
+                <a href="/?status=completed" class="filter-btn {{ 'active' if request.query_params.get('status') == 'completed' }}">Просмотрено</a>
+                <a href="/?status=planned" class="filter-btn {{ 'active' if request.query_params.get('status') == 'planned' }}">В планах</a>
+                <a href="/?status=dropped" class="filter-btn {{ 'active' if request.query_params.get('status') == 'dropped' }}">Брошено</a>
+            </div>
+        </section>
 
         <section class="titles-section">
             <h2>Моя коллекция</h2>
@@ -90,15 +116,35 @@
 
         <section class="backup-section">
             <h2>Резервное копирование</h2>
-            <div class="backup-info">
-                <p>Автоматическое копирование в Dropbox ежедневно в 03:00</p>
-                <button onclick="triggerBackup()" class="btn btn-secondary">Сделать бэкап сейчас</button>
+            <div class="backup-status-info">
+                {% if backup_info.last_backup %}
+                <div class="backup-detail">
+                    <span class="backup-label">Последний бэкап:</span>
+                    <span class="backup-value">{{ backup_info.last_backup[:16] if backup_info.last_backup else 'нет' }}</span>
+                </div>
+                <div class="backup-detail">
+                    <span class="backup-label">Статус:</span>
+                    <span class="backup-value {{ backup_info.status }}">{{ 'Успешно' if backup_info.status == 'success' else 'Ошибка' }}</span>
+                </div>
+                {% if backup_info.file_size %}
+                <div class="backup-detail">
+                    <span class="backup-label">Размер:</span>
+                    <span class="backup-value">{{ (backup_info.file_size / 1024 / 1024)|round(2) }} MB</span>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="backup-empty">Бэкапы ещё не выполнялись</p>
+                {% endif %}
+            </div>
+            <div class="backup-actions">
+                <p class="backup-hint">Автоматическое копирование в Dropbox ежедневно в 03:00</p>
+                <button onclick="triggerBackup()" class="btn btn-primary" id="backup-btn">Сделать бэкап сейчас</button>
             </div>
             <div id="backup-status"></div>
         </section>
 
         <footer>
-            <p>FilmoGraph © 2026 | Powered by OMDb + KinoPoisk + Shikimori</p>
+            <p>KinoLog © 2026 | Powered by OMDb + KinoPoisk + Kinorium + Shikimori</p>
         </footer>
     </div>
 

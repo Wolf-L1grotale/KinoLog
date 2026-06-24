@@ -49,7 +49,7 @@ async def check_api_status():
                         else:
                             _api_status[api_name]["error"] = None
                 elif api_name == "shikimori":
-                    resp = await client.get(f"{SHIKIMORI_API_URL}/animes?limit=1", headers={"User-Agent": "FilmoGraph/1.0"})
+                    resp = await client.get(f"{SHIKIMORI_API_URL}/animes?limit=1", headers={"User-Agent": "KinoLog/1.0"})
                     _api_status[api_name]["available"] = resp.status_code == 200
                     if resp.status_code != 200:
                         _api_status[api_name]["error"] = f"HTTP {resp.status_code}: {resp.text[:200]}"
@@ -170,7 +170,7 @@ async def search_shikimori(query: str) -> List[Dict]:
             response = await client.get(
                 f"{SHIKIMORI_API_URL}/animes",
                 params={"search": query, "limit": 10},
-                headers={"User-Agent": "FilmoGraph/1.0"},
+                headers={"User-Agent": "KinoLog/1.0"},
                 timeout=10.0
             )
             if response.status_code == 200:
@@ -218,7 +218,7 @@ async def get_shikimori_details(anime_id: int) -> Optional[Dict]:
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{SHIKIMORI_API_URL}/animes/{anime_id}",
-                headers={"User-Agent": "FilmoGraph/1.0"},
+                headers={"User-Agent": "KinoLog/1.0"},
                 timeout=10.0
             )
             if response.status_code == 200:

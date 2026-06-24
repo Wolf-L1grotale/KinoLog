@@ -24,14 +24,26 @@ async def lifespan(app: FastAPI):
     yield
     scheduler.shutdown()
 
-app = FastAPI(title="FilmoGraph", lifespan=lifespan)
+app = FastAPI(title="KinoLog", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def index(request: Request, type: str = "", status: str = ""):
     titles = await db.get_all_titles()
-    return templates.TemplateResponse("index.html", {"request": request, "titles": titles})
+
+    if type:
+        titles = [t for t in titles if t["media_type"] == type]
+    if status:
+        titles = [t for t in titles if t["current_status"] == status]
+
+    backup_info = await backup.get_backup_status()
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "titles": titles,
+        "backup_info": backup_info
+    })
 
 @app.get("/search", response_class=HTMLResponse)
 async def search_page(request: Request, q: str = "", type: str = "all"):
@@ -58,6 +70,9 @@ async def search_page(request: Request, q: str = "", type: str = "all"):
                         details = await kinopoisk.get_kinopoisk_details(tmdb_id)
                     elif media_type == "kinorium":
                         details = await kinorium.get_kinorium_details(tmdb_id)
+                        if not details:
+                            kp_results = await kinorium.search_kinorium(str(tmdb_id))
+                            details = kp_results[0] if kp_results else None
                     else:
                         details = None
                     if details:
