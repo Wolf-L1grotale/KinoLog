@@ -57,9 +57,29 @@ cp .env.example .env
 |------------|----------|----------------|
 | `OMDB_API_KEY` | Ключ [OMDb API](https://www.omdbapi.com/apikey.aspx) | Опционально |
 | `KINOPOISK_API_TOKEN` | Токен [api.kinopoisk.dev](https://api.kinopoisk.dev/) | Опционально |
-| `DROPBOX_ACCESS_TOKEN` | Токен [Dropbox](https://www.dropbox.com/developers/apps) | Опционально |
+| `DROPBOX_APP_KEY` | App Key приложения [Dropbox](https://www.dropbox.com/developers/apps) | Опционально |
+| `DROPBOX_APP_SECRET` | App Secret приложения Dropbox | Опционально |
 
 > Приложение работает без API-ключей — поиск будет идти через доступные источники.
+
+### 4. Настройка Dropbox (опционально)
+
+Для автоматических бэкапов в Dropbox:
+
+1. Создайте приложение на [Dropbox Developer Console](https://www.dropbox.com/developers/apps)
+2. Выберите "Scoped access" → "Full Dropbox" → назовите приложение
+3. Вкладка "Permissions": включите `files.content.write` и `files.content.read`
+4. Вкладка "Settings": скопируйте **App key** и **App secret** в `.env`:
+
+```
+DROPBOX_APP_KEY=ваш_app_key
+DROPBOX_APP_SECRET=ваш_app_secret
+```
+
+5. В настройках приложения укажите **Redirect URI**: `http://localhost:8000/api/dropbox/callback`
+6. Запустите приложение и нажмите "Подключить Dropbox" на главной странице
+
+Токены сохраняются автоматически и обновляются.
 
 ### 4. Запустите
 
@@ -79,6 +99,7 @@ kinolog/
 ├── kinopoisk.py        # Парсер KinoPoisk API
 ├── kinorium.py         # Парсер Kinorium (Playwright)
 ├── backup.py           # Резервное копирование в Dropbox
+├── dropbox_auth.py     # Dropbox OAuth2 авторизация
 ├── images.py           # Загрузка и хранение изображений
 ├── requirements.txt    # Зависимости Python
 ├── .env.example        # Пример переменных окружения
@@ -106,6 +127,10 @@ kinolog/
 | `GET` | `/api/stats` | Статистика коллекции |
 | `POST` | `/api/backup` | Триггер бэкапа |
 | `GET` | `/api/backup/status` | Статус последнего бэкапа |
+| `GET` | `/api/dropbox/status` | Статус подключения Dropbox |
+| `GET` | `/api/dropbox/auth` | Получить URL для OAuth авторизации |
+| `GET` | `/api/dropbox/callback` | Callback после авторизации |
+| `POST` | `/api/dropbox/disconnect` | Отключить Dropbox |
 
 ## Скриншоты
 

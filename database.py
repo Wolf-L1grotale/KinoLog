@@ -46,6 +46,16 @@ async def init_db():
                 error_message TEXT
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS dropbox_tokens (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                access_token TEXT NOT NULL,
+                refresh_token TEXT NOT NULL,
+                expires_at REAL,
+                account_name TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         await db.commit()
 
 async def add_title(tmdb_id: int, title: str, original_title: str, media_type: str,
@@ -137,3 +147,42 @@ async def log_backup(status: str, file_size: int = 0, error_message: str = None)
 
 async def get_database_size() -> int:
     return os.path.getsize(DATABASE_PATH) if os.path.exists(DATABASE_PATH) else 0
+
+
+async def save_dropbox_tokens(access_token: str, refresh_token: str,
+                               expires_at: float = None, account_name: str = None):
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute("""
+            INSERT INTO dropbox_tokens (id, access_token, refresh_token, expires_at, account_name, updated_at)
+            VALUES (1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(id) DO UPDATE SET
+                access_token = excluded.access_token,
+                refresh_token = excluded.refresh_token,
+                expires_at = excluded.expires_at,
+                account_name = excluded.account_name,
+                updated_at = CURRENT_TIMESTAMP
+        """, (access_token, refresh_token, expires_at, account_name))
+        await db.commit()
+
+
+async def get_dropbox_tokens() -> Optional[Dict]:
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM dropbox_tokens WHERE id = 1")
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+
+async def update_dropbox_access_token(access_token: str, expires_at: float = None):
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute("""
+            UPDATE dropbox_tokens SET access_token = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = 1
+        """, (access_token, expires_at))
+        await db.commit()
+
+
+async def delete_dropbox_tokens():
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute("DELETE FROM dropbox_tokens WHERE id = 1")
+        await db.commit()

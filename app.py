@@ -9,7 +9,9 @@ import tmdb
 import kinopoisk
 import kinorium
 import backup
+import dropbox_auth
 import images
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -268,6 +270,64 @@ async def stats():
         "anime": len([t for t in titles if t["media_type"] == "anime"])
     }
     return JSONResponse(content=stats_data)
+
+
+@app.get("/api/dropbox/status")
+async def dropbox_status():
+    tokens = await db.get_dropbox_tokens()
+    return JSONResponse(content={
+        "connected": tokens is not None,
+        "configured": dropbox_auth.is_configured(),
+        "account_name": tokens["account_name"] if tokens else None,
+    })
+
+
+@app.get("/api/dropbox/auth")
+async def dropbox_auth_start():
+    if not dropbox_auth.is_configured():
+        return JSONResponse(
+            status_code=400,
+            content={"error": "DROPBOX_APP_KEY и DROPBOX_APP_SECRET не заданы в .env"}
+        )
+    auth_url, state = dropbox_auth.get_auth_url()
+    return JSONResponse(content={"auth_url": auth_url, "state": state})
+
+
+@app.get("/api/dropbox/callback")
+async def dropbox_auth_callback(code: str = "", state: str = ""):
+    if not code or not state:
+        return RedirectResponse(url="/?dropbox_error=missing_params", status_code=302)
+
+    if not dropbox_auth.validate_state(state):
+        return RedirectResponse(url="/?dropbox_error=invalid_state", status_code=302)
+
+    try:
+        token_data = dropbox_auth.exchange_code(code)
+    except Exception as e:
+        return RedirectResponse(url=f"/?dropbox_error=exchange_failed", status_code=302)
+
+    access_token = token_data.get("access_token", "")
+    refresh_token = token_data.get("refresh_token", "")
+    expires_in = token_data.get("expires_in", 0)
+    expires_at = time.time() + expires_in if expires_in else None
+
+    account_name = ""
+    try:
+        dbx = dropbox_auth.get_dropbox_client(access_token)
+        account = dbx.users_get_current_account()
+        account_name = account.name.display_name
+    except Exception:
+        pass
+
+    await db.save_dropbox_tokens(access_token, refresh_token, expires_at, account_name)
+
+    return RedirectResponse(url="/?dropbox_connected=1", status_code=302)
+
+
+@app.post("/api/dropbox/disconnect")
+async def dropbox_disconnect():
+    await db.delete_dropbox_tokens()
+    return JSONResponse(content={"status": "disconnected"})
 
 if __name__ == "__main__":
     import uvicorn

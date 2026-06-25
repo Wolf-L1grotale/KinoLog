@@ -116,6 +116,13 @@
 
         <section class="backup-section">
             <h2>Резервное копирование</h2>
+            <div class="dropbox-status-bar" id="dropbox-status-bar">
+                <div class="dropbox-info">
+                    <span class="dropbox-icon">📦</span>
+                    <span id="dropbox-status-text">Проверка...</span>
+                </div>
+                <div id="dropbox-actions"></div>
+            </div>
             <div class="backup-status-info">
                 {% if backup_info.last_backup %}
                 <div class="backup-detail">
@@ -148,6 +155,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js?v=2"></script>
 </body>
 </html>

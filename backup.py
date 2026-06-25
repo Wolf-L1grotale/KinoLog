@@ -1,26 +1,50 @@
 import dropbox
 import os
-import shutil
 import zipfile
+import time
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from database import log_backup, get_database_size, DATABASE_PATH
+from database import log_backup, get_database_size, DATABASE_PATH, get_dropbox_tokens, update_dropbox_access_token
+import dropbox_auth
 
 load_dotenv()
 
-DROPBOX_ACCESS_TOKEN = os.getenv("DROPBOX_ACCESS_TOKEN", "")
 DROPBOX_BACKUP_FOLDER = "/filmograf_backups"
 BACKUP_RETENTION_DAYS = 30
 COVERS_DIR = Path("static/covers")
 
+
+async def _get_dropbox_client():
+    tokens = await get_dropbox_tokens()
+    if not tokens:
+        return None
+
+    access_token = tokens["access_token"]
+    refresh_token = tokens["refresh_token"]
+    expires_at = tokens.get("expires_at")
+
+    if dropbox_auth.is_token_expired(expires_at):
+        try:
+            new_data = dropbox_auth.refresh_access_token(refresh_token)
+            access_token = new_data["access_token"]
+            new_expires_in = new_data.get("expires_in", 0)
+            new_expires_at = time.time() + new_expires_in if new_expires_in else None
+            if "refresh_token" in new_data:
+                refresh_token = new_data["refresh_token"]
+            await update_dropbox_access_token(access_token, new_expires_at)
+        except Exception:
+            return None
+
+    return dropbox_auth.get_dropbox_client(access_token)
+
+
 async def backup_to_dropbox() -> dict:
-    if not DROPBOX_ACCESS_TOKEN:
-        return {"status": "skipped", "message": "Dropbox token not configured"}
+    dbx = await _get_dropbox_client()
+    if not dbx:
+        return {"status": "skipped", "message": "Dropbox не подключён"}
 
     try:
-        dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
-
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = f"filmograf_backup_{timestamp}.zip"
         local_backup_path = f"./backups/{backup_filename}"
