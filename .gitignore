@@ -16,3 +16,6 @@ backups/
 
 /static/covers/*
 /mimo.exe
+/dist/
+/build/
+*.spec

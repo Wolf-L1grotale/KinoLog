@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import os
 import database as db
 import tmdb
 import kinopoisk
@@ -16,6 +17,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def _resolve_path(subdir):
+    bundle_path = os.environ.get("KINOLOG_BUNDLE_PATH")
+    if bundle_path:
+        return os.path.join(bundle_path, subdir)
+    return subdir
+
 scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
@@ -27,8 +34,8 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(title="KinoLog", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory=_resolve_path("static")), name="static")
+templates = Jinja2Templates(directory=_resolve_path("templates"))
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, type: str = "", status: str = ""):
