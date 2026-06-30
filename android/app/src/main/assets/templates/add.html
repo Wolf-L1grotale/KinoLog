@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить — {{ title.title }} — KinoLog</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>KinoLog</h1>
+            <p class="subtitle">Добавление в коллекцию</p>
+        </header>
+
+        <nav>
+            <a href="/" class="nav-link">Главная</a>
+            <a href="/search" class="nav-link">Поиск</a>
+        </nav>
+
+        <section class="title-detail">
+            <div class="title-hero">
+                {% if title.backdrop_path %}
+                <img src="{{ title.backdrop_path }}" alt="{{ title.title }}" class="backdrop">
+                {% endif %}
+                <div class="title-content">
+                    <div class="title-poster">
+                        {% if title.poster_path %}
+                        <img src="{{ title.poster_path }}" alt="{{ title.title }}">
+                        {% else %}
+                        <div class="poster-placeholder large">Нет постера</div>
+                        {% endif %}
+                    </div>
+                    <div class="title-main">
+                        <h2>{{ title.title }}</h2>
+                        {% if title.original_title and title.original_title != title.title %}
+                        <p class="original-title">{{ title.original_title }}</p>
+                        {% endif %}
+                        <div class="title-meta">
+                            <span class="year">{{ title.release_date[:4] if title.release_date else '' }}</span>
+                            <span class="rating">★ {{ title.vote_average|round(1) if title.vote_average else '-' }}</span>
+                            <span class="media-type-badge {{ title.media_type }}">
+                                {% if title.media_type == 'tv' %}Сериал
+                                {% elif title.media_type == 'anime' %}Аниме
+                                {% else %}Фильм{% endif %}
+                            </span>
+                            {% if title.media_type in ['tv', 'anime'] and title.total_episodes > 0 %}
+                            <span class="episodes">{{ title.total_episodes }} серий</span>
+                            {% endif %}
+                        </div>
+                        {% if title.overview %}
+                        <p class="overview">{{ title.overview[:300] }}{% if title.overview|length > 300 %}...{% endif %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-form">
+                <h3>Настройте перед добавлением</h3>
+                <form action="/add" method="post">
+                    <input type="hidden" name="tmdb_id" value="{{ title.tmdb_id }}">
+                    <input type="hidden" name="title" value="{{ title.title }}">
+                    <input type="hidden" name="original_title" value="{{ title.original_title }}">
+                    <input type="hidden" name="media_type" value="{{ title.media_type }}">
+                    <input type="hidden" name="poster_path" value="{{ title.poster_path or '' }}">
+                    <input type="hidden" name="backdrop_path" value="{{ title.backdrop_path or '' }}">
+                    <input type="hidden" name="overview" value="{{ title.overview or '' }}">
+                    <input type="hidden" name="release_date" value="{{ title.release_date or '' }}">
+                    <input type="hidden" name="vote_average" value="{{ title.vote_average or 0 }}">
+                    <input type="hidden" name="total_seasons" value="{{ title.total_seasons or 0 }}">
+                    <input type="hidden" name="total_episodes" value="{{ title.total_episodes or 0 }}">
+
+                    <div class="form-group">
+                        <label for="current_status">Статус:</label>
+                        <select name="current_status" id="current_status" onchange="toggleProgress()">
+                            <option value="watching" selected>Смотрю</option>
+                            <option value="completed">Просмотрено</option>
+                            <option value="planned">В планах</option>
+                            <option value="dropped">Брошено</option>
+                        </select>
+                    </div>
+
+                    <div id="progress-section" {% if title.media_type in ['tv', 'anime'] and (title.media_type == 'tv' or title.total_seasons > 0) %}style="display: block;"{% endif %}>
+                        {% if title.media_type == 'tv' %}
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="current_season">Текущий сезон:</label>
+                                <input type="number" name="current_season" id="current_season" value="1" min="1"{% if title.total_seasons %} max="{{ title.total_seasons }}"{% endif %}>
+                                {% if title.total_seasons > 0 %}
+                                <small>из {{ title.total_seasons }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="form-group">
+                                <label for="current_episode">Текущая серия:</label>
+                                <input type="number" name="current_episode" id="current_episode" value="1" min="1">
+                            </div>
+                        </div>
+                        {% elif title.media_type == 'anime' and title.total_episodes > 1 %}
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="current_episode">Текущая серия:</label>
+                                <input type="number" name="current_episode" id="current_episode" value="1" min="1">
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Заметки:</label>
+                        <textarea name="notes" id="notes" rows="3" placeholder="Личные заметки..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Добавить в коллекцию</button>
+                        <a href="/search" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <footer>
+            <p>KinoLog © 2026 | Powered by OMDb + KinoPoisk + Kinorium + Shikimori</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleProgress() {
+            var statusEl = document.getElementById('current_status');
+            if (!statusEl) return;
+            var status = statusEl.value;
+            var section = document.getElementById('progress-section');
+            if (!section) return;
+
+            if (status === 'completed' || status === 'planned') {
+                var seasonInput = document.getElementById('current_season');
+                var episodeInput = document.getElementById('current_episode');
+                if (status === 'completed') {
+                    var totalEp = document.querySelector('input[name="total_episodes"]');
+                    var totalSes = document.querySelector('input[name="total_seasons"]');
+                    if (totalEp && episodeInput) episodeInput.value = parseInt(totalEp.value) || 1;
+                    if (totalSes && seasonInput) seasonInput.value = parseInt(totalSes.value) || 1;
+                }
+                section.style.display = 'none';
+            } else {
+                section.style.display = 'block';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', toggleProgress);
+    </script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

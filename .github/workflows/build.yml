@@ -1,0 +1,124 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Generate icon
+        run: python generate_icon.py
+
+      - name: Build exe
+        run: python -m PyInstaller --noconfirm --onefile --windowed --name KinoLog --icon=kino.ico --add-data "templates;templates" --add-data "static;static" --hidden-import uvicorn --hidden-import uvicorn.logging --hidden-import uvicorn.loops --hidden-import uvicorn.loops.auto --hidden-import uvicorn.protocols --hidden-import uvicorn.protocols.http --hidden-import uvicorn.protocols.http.auto --hidden-import uvicorn.protocols.websockets --hidden-import uvicorn.protocols.websockets.auto --hidden-import uvicorn.lifespan --hidden-import uvicorn.lifespan.on --hidden-import pystray._win32 --hidden-import aiosqlite --hidden-import PIL main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KinoLog-windows
+          path: dist/KinoLog.exe
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Python dependencies
+        run: pip install Pillow
+
+      - name: Generate icons
+        run: |
+          cd android
+          python -c "
+          from PIL import Image
+          import os
+          ico = Image.open('../kino.ico')
+          sizes = {'mipmap-hdpi': 72, 'mipmap-xhdpi': 96, 'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
+          base = 'app/src/main/res'
+          for folder, size in sizes.items():
+              os.makedirs(os.path.join(base, folder), exist_ok=True)
+              img = ico.resize((size, size), Image.LANCZOS)
+              img.save(os.path.join(base, folder, 'ic_launcher.png'), 'PNG')
+          print('Icons generated')
+          "
+
+      - name: Copy Python files
+        run: |
+          cd android
+          mkdir -p app/src/main/python
+          mkdir -p app/src/main/assets/templates
+          mkdir -p app/src/main/assets/static
+          cp ../app.py app/src/main/python/
+          cp ../database.py app/src/main/python/
+          cp ../tmdb.py app/src/main/python/
+          cp ../kinopoisk.py app/src/main/python/
+          cp ../kinorium.py app/src/main/python/
+          cp ../images.py app/src/main/python/
+          cp -r ../templates/* app/src/main/assets/templates/
+          cp -r ../static/* app/src/main/assets/static/
+
+      - name: Generate Gradle wrapper
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.12
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KinoLog-android
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  release:
+    needs: [build-windows, build-android]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            KinoLog-windows/KinoLog.exe
+            KinoLog-android/app-debug.apk
+          generate_release_notes: true

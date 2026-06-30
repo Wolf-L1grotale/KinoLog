@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title.title }} - KinoLog</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>KinoLog</h1>
+            <p class="subtitle">{{ title.title }}</p>
+        </header>
+
+        <nav>
+            <a href="/" class="nav-link">Главная</a>
+            <a href="/search" class="nav-link">Поиск</a>
+        </nav>
+
+        <section class="title-detail">
+            <div class="title-hero">
+                {% if title.local_backdrop_path %}
+                <img src="{{ title.local_backdrop_path }}" alt="{{ title.title }}" class="backdrop">
+                {% elif title.backdrop_path %}
+                <img src="{{ title.backdrop_path }}" alt="{{ title.title }}" class="backdrop">
+                {% endif %}
+                <div class="title-content">
+                    <div class="title-poster">
+                        {% if title.local_poster_path %}
+                        <img src="{{ title.local_poster_path }}" alt="{{ title.title }}">
+                        {% elif title.poster_path %}
+                        <img src="{{ title.poster_path }}" alt="{{ title.title }}">
+                        {% else %}
+                        <div class="poster-placeholder large">Нет постера</div>
+                        {% endif %}
+                    </div>
+                    <div class="title-main">
+                        <h2>{{ title.title }}</h2>
+                        {% if title.original_title != title.title %}
+                        <p class="original-title">{{ title.original_title }}</p>
+                        {% endif %}
+                        <div class="title-meta">
+                            <span class="year">{{ title.release_date[:4] if title.release_date else 'Неизвестно' }}</span>
+                            <span class="rating">★ {{ title.vote_average|round(1) if title.vote_average else '-' }}</span>
+                            <span class="media-type-badge {{ title.media_type }}">
+                                {% if title.media_type == 'tv' %}Сериал
+                                {% elif title.media_type == 'anime' %}Аниме
+                                {% else %}Фильм{% endif %}
+                            </span>
+                            {% if title.media_type == 'tv' %}
+                            <span class="episodes">{{ title.total_seasons }} сезон(ов), {{ title.total_episodes }} серий</span>
+                            {% elif title.media_type == 'anime' and title.total_seasons > 0 %}
+                            <span class="episodes">{{ title.total_episodes }} серий</span>
+                            {% elif title.media_type == 'anime' and title.total_episodes > 1 %}
+                            <span class="episodes">{{ title.total_episodes }} серий</span>
+                            {% endif %}
+                        </div>
+                        <p class="overview">{{ title.overview }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="images-section">
+                <h3>Изображения</h3>
+                <div class="upload-forms">
+                    <form action="/title/{{ title.tmdb_id }}/upload" method="post" enctype="multipart/form-data" class="upload-form">
+                        <input type="hidden" name="image_type" value="poster">
+                        <label class="upload-label">
+                            <span>Постер</span>
+                            <input type="file" name="image" accept="image/*" required onchange="this.form.submit()">
+                        </label>
+                    </form>
+                    <form action="/title/{{ title.tmdb_id }}/upload" method="post" enctype="multipart/form-data" class="upload-form">
+                        <input type="hidden" name="image_type" value="backdrop">
+                        <label class="upload-label">
+                            <span>Бэкдроп</span>
+                            <input type="file" name="image" accept="image/*" required onchange="this.form.submit()">
+                        </label>
+                    </form>
+                </div>
+                <p class="upload-hint">Загруженные изображения сохраняются локально</p>
+            </div>
+
+            <div class="edit-form">
+                <h3>Обновить статус</h3>
+                <form action="/title/{{ title.tmdb_id }}/update" method="post">
+                    <div class="form-group">
+                        <label for="current_status">Статус:</label>
+                        <select name="current_status" id="current_status">
+                            <option value="watching" {{ 'selected' if title.current_status == 'watching' }}>Смотрю</option>
+                            <option value="completed" {{ 'selected' if title.current_status == 'completed' }}>Просмотрено</option>
+                            <option value="planned" {{ 'selected' if title.current_status == 'planned' }}>В планах</option>
+                            <option value="dropped" {{ 'selected' if title.current_status == 'dropped' }}>Брошено</option>
+                        </select>
+                    </div>
+
+                    {% if title.media_type == 'tv' %}
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="current_season">Текущий сезон:</label>
+                            <input type="number" name="current_season" id="current_season" value="{{ title.current_season }}" min="1"{% if title.total_seasons %} max="{{ title.total_seasons }}"{% endif %}>
+                        </div>
+                        <div class="form-group">
+                            <label for="current_episode">Текущая серия:</label>
+                            <input type="number" name="current_episode" id="current_episode" value="{{ title.current_episode }}" min="1">
+                        </div>
+                    </div>
+                    {% elif title.media_type == 'anime' and title.total_episodes > 1 %}
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="current_episode">Текущая серия:</label>
+                            <input type="number" name="current_episode" id="current_episode" value="{{ title.current_episode }}" min="1">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label for="notes">Заметки:</label>
+                        <textarea name="notes" id="notes" rows="3">{{ title.notes or '' }}</textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                        <a href="/" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="danger-zone">
+                <form action="/title/{{ title.tmdb_id }}/delete" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить этот тайтл из коллекции?')">
+                    <button type="submit" class="btn btn-danger">Удалить из коллекции</button>
+                </form>
+            </div>
+        </section>
+
+        <footer>
+            <p>KinoLog © 2026 | Powered by OMDb + KinoPoisk + Kinorium + Shikimori</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

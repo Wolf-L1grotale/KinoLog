@@ -19,3 +19,7 @@ backups/
 /dist/
 /build/
 *.spec
+/android/app/src/main/assets/static/covers/*
+/KinoLog.apk
+/KinoLog.exe
+/kino_log_error.log

@@ -1,0 +1,66 @@
+plugins {
+    id 'com.android.application'
+    id 'com.chaquo.python'
+}
+
+android {
+    namespace 'com.kinolog.app'
+    compileSdk 36
+    buildToolsVersion "36.0.0"
+
+    defaultConfig {
+        applicationId "com.kinolog.app"
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName "1.0"
+
+        ndk {
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            python.srcDirs = ['src/main/python']
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        version = "3.13"
+        buildPython("py", "-3.13")
+        pip {
+            install "fastapi==0.104.1"
+            install "uvicorn==0.24.0"
+            install "jinja2==3.1.2"
+            install "python-multipart==0.0.6"
+            install "httpx==0.25.2"
+            install "apscheduler==3.10.4"
+            install "aiosqlite==0.19.0"
+            install "beautifulsoup4==4.12.3"
+            install "python-dotenv==1.0.0"
+            install "dropbox==11.36.2"
+        }
+        extractPackages("fastapi", "uvicorn", "starlette", "pydantic")
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.webkit:webkit:1.8.0'
+}
