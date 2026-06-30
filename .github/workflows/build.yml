@@ -54,6 +54,11 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Setup Python symlinks
+        run: |
+          which python3 || ln -s $(which python) /usr/local/bin/python3
+          python3 --version
+
       - name: Install Python dependencies
         run: pip install Pillow
 
