@@ -263,6 +263,18 @@ async def backup_status():
     status = await backup.get_backup_status()
     return JSONResponse(content=status)
 
+@app.get("/api/sync/status")
+async def sync_status():
+    import sync
+    status = await sync.get_sync_status()
+    return JSONResponse(content=status)
+
+@app.post("/api/sync")
+async def trigger_sync():
+    import sync
+    result = await sync.force_sync()
+    return JSONResponse(content=result)
+
 @app.get("/api/stats")
 async def stats():
     titles = await db.get_all_titles()

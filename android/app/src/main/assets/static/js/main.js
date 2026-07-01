@@ -46,6 +46,7 @@ async function forceSync() {
         } else {
             statusEl.className = 'success';
             statusEl.textContent = data.message || 'Синхронизация завершена';
+            loadSyncStatus();
             setTimeout(() => { location.reload(); }, 2000);
         }
     } catch (error) {
@@ -133,8 +134,12 @@ async function loadSyncStatus() {
         const data = await resp.json();
 
         if (data.sync_time) {
-            const date = new Date(data.sync_time * 1000);
-            const timeStr = date.toLocaleString('ru-RU');
+            let timeStr;
+            if (typeof data.sync_time === 'number') {
+                timeStr = new Date(data.sync_time * 1000).toLocaleString('ru-RU');
+            } else {
+                timeStr = new Date(data.sync_time).toLocaleString('ru-RU');
+            }
             statusEl.innerHTML = `
                 <div class="sync-detail">
                     <span class="sync-label">Последняя синхронизация:</span>

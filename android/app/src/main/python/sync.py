@@ -147,6 +147,7 @@ async def sync_on_startup(db_path):
         remote_data = await download_sync_file(dbx)
         if remote_data:
             restore_from_sync_zip(db_path, remote_data)
+            await db.init_db()
             state = load_sync_state()
             state["last_sync_time"] = time.time()
             state["local_hash"] = calculate_db_hash(db_path)
@@ -164,6 +165,7 @@ async def sync_on_startup(db_path):
         remote_data = await download_sync_file(dbx)
         if remote_data:
             restore_from_sync_zip(db_path, remote_data)
+            await db.init_db()
             state = load_sync_state()
             state["last_sync_time"] = time.time()
             state["local_hash"] = calculate_db_hash(db_path)
@@ -184,6 +186,7 @@ async def sync_after_connect(db_path):
     remote_data = await download_sync_file(dbx)
     if remote_data:
         restore_from_sync_zip(db_path, remote_data)
+        await db.init_db()
         state = load_sync_state()
         state["last_sync_time"] = time.time()
         state["local_hash"] = calculate_db_hash(db_path)
@@ -228,6 +231,7 @@ async def force_sync(db_path):
         return {"action": "up_to_date", "message": "Данные уже синхронизированы"}
 
     restore_from_sync_zip(db_path, remote_data)
+    await db.init_db()
     state = load_sync_state()
     state["last_sync_time"] = time.time()
     state["local_hash"] = calculate_db_hash(db_path)
